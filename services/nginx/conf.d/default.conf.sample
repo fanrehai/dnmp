@@ -1,0 +1,33 @@
+server {
+    listen       80;
+    server_name  default.host;
+    root   /www/default.file;
+    index  index.php index.html index.htm;
+
+    access_log /dev/null;
+    #access_log  /var/log/nginx/nginx.localhost.access.log  main;
+    error_log  /var/log/nginx/default.error.log  warn;
+
+    #error_page  404              /404.html;
+
+    # redirect server error pages to the static page /50x.html
+    #
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html;
+    }
+
+    # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
+    #
+    include conf.d/php/php.version.conf;
+
+    # php Framework Config
+    include frame.config;
+
+    # deny access to .htaccess files, if Apache's document root
+    # concurs with nginx's one
+    #
+    #location ~ /\.ht {
+    #    deny  all;
+    #}
+}
