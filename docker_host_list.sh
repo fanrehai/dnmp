@@ -2,11 +2,12 @@
 
 
 ######################## Main #########################
-
+# 读取.env文件并加载其中的变量
+. .env
 # Dnmp项目目录
-dnmpPath='yourPath'
+dnmpPath=${DNMP_PATH}
 # PHP项目目录
-phpProjectPath='yourPath'
+phpProjectPath=${PHP_PROJECT_PATH}
 
 # 读取并解析配置文件的某个特定项
 function read_nginx_conf_item {
@@ -39,7 +40,7 @@ for nginxConfFile in ${phpNginxConfigList[@]}
     realProjectPath="$phpProjectPath/$projectName"
     # --------- 获取 PHP 版本 ---------
     # 读取 NGINX 配置
-    tmpPHPVersion=$(read_nginx_conf_item 'include' "$nginxConfFile")
+    tmpPHPVersion=$(read_nginx_conf_item 'include conf.d/php' "$nginxConfFile")
     # 取出项目版本
     versionName=$(echo $tmpPHPVersion | sed -E 's|^.+/([^/]+)\..+|\1|')
     # --------- 获取域名状态 ---------
@@ -57,10 +58,3 @@ for nginxConfFile in ${phpNginxConfigList[@]}
 
     printf "|%-20s|%-60s|%-10s|%-10s|\n" $serverName $realProjectPath $versionName $serverHostStatus
   done
-
-
-
-
-
-
-

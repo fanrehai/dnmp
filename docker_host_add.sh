@@ -2,17 +2,16 @@
 
 
 ######################## Main #########################
-
-set timeout 60
-
-read -p "📂文件夹名称:" fileName
-read -p "🌐网站域名:" hostName
-read -p "📖网站备注:" remark
-
+# 读取.env文件并加载其中的变量
+. .env
 # Dnmp项目目录
-dnmpPath='yourPath'
+dnmpPath=${DNMP_PATH}
 # PHP项目目录
-projectPath='yourPath'
+phpProjectPath=${PHP_PROJECT_PATH}
+
+read -r "📂文件夹名称:" fileName
+read -r "🌐网站域名:" hostName
+read -r "📖网站备注:" remark
 
 # ----------------------------------- PHP版本 ------------------------------------
 # PHP配置基础目录
@@ -36,7 +35,7 @@ for item in ${containerList[@]}
     done
 
 echo "\n\033[1;33m🐘PHP版本:\033[0m\n${versionStr}"
-read -p "请输入版本对应数字 [0-$((index-1))]:" version
+read -r "请输入版本对应数字 [0-$((index-1))]:" version
 
 if [[ $version -gt $index || $version -lt '0' ]]; then
   echo '版本错误'
@@ -80,12 +79,12 @@ while [ $farmeValid -eq 0 ]; do
 done
 
 # ----------------------------------- 创建网站目录 ------------------------------------
-if [ ! -d "$projectPath/$fileName" ];then
-  mkdir $projectPath/$fileName
+if [ ! -d "$phpProjectPath/$fileName" ];then
+  mkdir $phpProjectPath/$fileName
   echo "📂文件夹创建成功"
 else
   echo "\n\033[1;33m📂文件夹已经存在:\033[0m\n0.取消\n1.继续"
-  read -p "是否直接使用 [0-1]:" whether
+  read -r "是否直接使用 [0-1]:" whether
   if [[ $whether -eq '0' ]]; then
     exit
   fi
