@@ -34,7 +34,7 @@ for item in ${containerList[@]}
       fi
     done
 
-echo "\n\033[1;33m🐘PHP版本:\033[0m\n${versionStr}"
+printf "\n\033[1;33m🐘PHP版本:\033[0m\n${versionStr}"
 read -r "请输入版本对应数字 [0-$((index-1))]:" version
 
 if [[ $version -gt $index || $version -lt '0' ]]; then
@@ -48,7 +48,7 @@ frameConfigPath="$dnmpPath/services/nginx/conf.d/rewrite"
 frameFiles=$(ls -1q "$frameConfigPath")
 
 if [ -z "$frameFiles" ]; then
-  echo "\033[1;31mPHP框架配置目录错误!!!\033[0m"
+  printf "\033[1;31mPHP框架配置目录错误!!!\033[0m"
 fi
 
 frameIndex=1
@@ -64,26 +64,26 @@ while IFS= read -r item; do
     fi
 done <<< "$frameFiles"
 
-echo "\n\033[1;33m框架入口文件配置:\033[0m"
+printf "\n\033[1;33m框架入口文件配置:\033[0m"
 echo "$(printf "%2d. %s\n" 0 "无需配置")\n$frameStr"
 
 farmeValid=0
 while [ $farmeValid -eq 0 ]; do
-  read -p "请输入框架对应数字[0-${frameIndex}]:" frameCheck
+  read -r "请输入框架对应数字[0-${frameIndex}]:" frameCheck
 
   if [ $frameCheck -ge 0 ] && [ $frameCheck -le $frameIndex ]; then
     farmeValid=1
   else
-    echo "\033[1;31m输入无效!!!\033[0m"
+    printf "\033[1;31m输入无效!!!\033[0m"
   fi
 done
 
 # ----------------------------------- 创建网站目录 ------------------------------------
 if [ ! -d "$phpProjectPath/$fileName" ];then
-  mkdir $phpProjectPath/$fileName
+  mkdir "$phpProjectPath/$fileName"
   echo "📂文件夹创建成功"
 else
-  echo "\n\033[1;33m📂文件夹已经存在:\033[0m\n0.取消\n1.继续"
+  printf "\n\033[1;33m📂文件夹已经存在:\033[0m\n0.取消\n1.继续"
   read -r "是否直接使用 [0-1]:" whether
   if [[ $whether -eq '0' ]]; then
     exit
@@ -124,5 +124,5 @@ fi
 cd $dnmpPath
 docker-compose restart nginx
 
-echo "\n\n\n🎉🎉🎉网站创建成功🎉🎉🎉\n\n\n"
+printf "\n\n\n🎉🎉🎉网站创建成功🎉🎉🎉\n\n\n"
 
