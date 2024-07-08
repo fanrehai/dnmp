@@ -9,9 +9,12 @@ dnmpPath=${DNMP_PATH}
 # PHP项目目录
 phpProjectPath=${PHP_PROJECT_PATH}
 
-read -r "📂文件夹名称:" fileName
-read -r "🌐网站域名:" hostName
-read -r "📖网站备注:" remark
+printf "📂文件夹名称:"
+read -r fileName
+printf "🌐网站域名:"
+read -r hostName
+printf "📖网站备注:"
+read -r remark
 
 # ----------------------------------- PHP版本 ------------------------------------
 # PHP配置基础目录
@@ -35,7 +38,8 @@ for item in ${containerList[@]}
     done
 
 printf "\n\033[1;33m🐘PHP版本:\033[0m\n${versionStr}"
-read -r "请输入版本对应数字 [0-$((index-1))]:" version
+printf "请输入版本对应数字 [0-$((index-1))]:"
+read -r version
 
 if [[ $version -gt $index || $version -lt '0' ]]; then
   echo '版本错误'
@@ -65,11 +69,13 @@ while IFS= read -r item; do
 done <<< "$frameFiles"
 
 printf "\n\033[1;33m框架入口文件配置:\033[0m"
-echo "$(printf "%2d. %s\n" 0 "无需配置")\n$frameStr"
+printf "%2d. %s\n" 0 "无需配置\n"
+printf "$frameStr"
 
 farmeValid=0
 while [ $farmeValid -eq 0 ]; do
-  read -r "请输入框架对应数字[0-${frameIndex}]:" frameCheck
+  printf "请输入框架对应数字[0-${frameIndex}]:"
+  read -r frameCheck
 
   if [ $frameCheck -ge 0 ] && [ $frameCheck -le $frameIndex ]; then
     farmeValid=1
@@ -84,7 +90,8 @@ if [ ! -d "$phpProjectPath/$fileName" ];then
   echo "📂文件夹创建成功"
 else
   printf "\n\033[1;33m📂文件夹已经存在:\033[0m\n0.取消\n1.继续"
-  read -r "是否直接使用 [0-1]:" whether
+  printf "是否直接使用 [0-1]:"
+  read -r whether
   if [[ $whether -eq '0' ]]; then
     exit
   fi
