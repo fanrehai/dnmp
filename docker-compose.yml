@@ -148,6 +148,30 @@ services:
     networks:
       - default
 
+
+  php84:
+    build:
+      context: ./services/php84
+      args:
+        PHP_VERSION: php:${PHP84_VERSION}
+        CONTAINER_PACKAGE_URL: ${CONTAINER_PACKAGE_URL}
+        PHP_EXTENSIONS: ${PHP84_EXTENSIONS}
+        TZ: "$TZ"
+    container_name: php84
+    ports:
+      - "9511:9511"
+    volumes:
+      - ${SOURCE_DIR}:/www/:rw
+      - ${PHP84_PHP_CONF_FILE}:/usr/local/etc/php/php.ini:ro
+      - ${PHP84_FPM_CONF_FILE}:/usr/local/etc/php-fpm.d/www.conf:rw
+      - ${PHP84_LOG_DIR}:/var/log/php
+      - ${DATA_DIR}/composer:/tmp/composer
+    restart: always
+    cap_add:
+      - SYS_PTRACE
+    networks:
+      - default
+
 #  php56:
 #    build:
 #      context: ./services/php
@@ -255,7 +279,7 @@ services:
       - ${REDIS_CONF_FILE}:/etc/redis.conf:ro
       - ${DATA_DIR}/redis:/data/:rw
     restart: always
-    entrypoint: ["redis-server", "/etc/redis.conf"]
+    entrypoint: ["redis-server", "/etc/redis.conf", "--ignore-warnings", "THP"]
     environment:
       TZ: "$TZ"
     networks:
@@ -431,7 +455,7 @@ services:
 #      - SYS_PTRACE
 #    networks:
 #      - default      
-
+  
 networks:
   default:
     driver: bridge
