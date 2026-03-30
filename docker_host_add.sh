@@ -1,7 +1,18 @@
-#!/bin/sh
+#!/bin/bash
+
+# 获取脚本所在目录的绝对路径
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# 切换到脚本所在目录
+cd "$SCRIPT_DIR"
 
 # 从.env文件中加载环境变量，这样后续可以使用其中定义的路径等信息
-. .env
+if [ -f ".env" ]; then
+    . .env
+else
+    echo -e "\033[1;31m❌ .env 文件不存在，请确保在正确的目录执行脚本\033[0m"
+    exit 1
+fi
 
 # 定义DNMP项目的路径，从.env文件加载的变量赋值而来
 dnmp_path=${DNMP_PATH}
@@ -90,10 +101,10 @@ done
 # ----------------------------------- 框架选择 ------------------------------------
 
 # 输出可用PHP版本的提示信息，使用黄色高亮显示
-echo "\n\033[1;33m🐘可用的PHP版本:\033[0m"
+echo -e "\n\033[1;33m🐘可用的PHP版本:\033[0m"
 
 # 输出具体的版本选择提示信息
-echo "$version_choices"
+echo -e "$version_choices"
 
 # 进入无限循环，用于验证用户输入的版本选择是否有效
 while true; do
@@ -118,11 +129,16 @@ selected_php_version=${available_php_versions[$php_version_choice]}
 # 定义框架配置的基础目录
 frame_config_path="$dnmp_path/services/nginx/conf.d/rewrite"
 # 获取框架配置目录下的文件列表，将错误信息重定向到/dev/null
-frame_files=$(ls -1q "$frame_config_path" 2>/dev/null)
+# 使用数组直接存储文件列表
+available_frameworks=()
+while IFS= read -r -d '' file; do
+    available_frameworks+=("$file")
+done < <(find "$frame_config_path" -maxdepth 1 -type f -name "*.conf" -print0 | sort)
+
 # 检查框架配置目录下是否有文件
-if [ -z "$frame_files" ]; then
+if [ ${#available_frameworks[@]} -eq 0 ]; then
     # 如果没有文件，输出错误信息并退出脚本
-    echo "\033[1;31mPHP框架配置目录错误!!!\033[0m"
+    echo -e "\033[1;31mPHP框架配置目录错误!!!\033[0m"
     exit 1
 fi
 
@@ -130,15 +146,14 @@ fi
 frame_index=1
 
 frame_choices=" 0. 无需配置\n"  # 初始选项换行
-while IFS= read -r file; do
-    # 使用换行符确保每个选项单独一行，%2d 控制序号宽度（如  1.  2.）
-    frame_choices="$frame_choices$(printf " %d. %s\n" $frame_index "$file") \n"
-    available_frameworks+=("$file")
+for file in "${available_frameworks[@]}"; do
+    # 使用换行符确保每个选项单独一行
+    frame_choices="$frame_choices$(printf " %d. %s\n" $frame_index "$(basename "$file")")"
     frame_index=$((frame_index + 1))
-done <<< "$frame_files"
+done
 
-echo "\n\033[1;33m框架入口文件配置:\033[0m"
-echo "$frame_choices"
+echo -e "\n\033[1;33m框架入口文件配置:\033[0m"
+echo -e "$frame_choices"
 
 # 进入无限循环，用于验证用户输入的框架选择是否有效
 while true; do
@@ -152,7 +167,7 @@ while true; do
         break
     else
         # 如果无效，提示用户重新输入
-        echo "\033[1;31m输入无效，请重新输入!!!\033[0m"
+        echo -e "\033[1;31m输入无效，请重新输入!!!\033[0m"
     fi
 done
 
@@ -168,7 +183,7 @@ if [ ! -d "$site_folder" ]; then
     echo "📂文件夹创建成功"
 else
     # 如果文件夹已存在，输出提示信息
-    echo "\n\033[1;33m📂文件夹已经存在:\033[0m"
+    echo -e "\n\033[1;33m📂文件夹已经存在:\033[0m"
     # 提示用户选择取消或继续
     echo "0. 取消"
     echo "1. 继续"
@@ -202,10 +217,21 @@ cd "$nginx_conf_dir"
 nginx_conf_file="$domain_name.conf"
 # 从默认配置文件模板复制一个新的配置文件
 cp ./default.conf.sample "$nginx_conf_file"
+
+# --- 兼容性修复：处理 macOS 和 Linux 的 sed 差异 ---
+# 定义一个简单的替换函数
+run_sed() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i "" "$1" "$2"
+    else
+        sed -i "$1" "$2"
+    fi
+}
+
 # 替换配置 这里的空双引号是为了避开命令的强制备份逻辑
-sed -i "" "s/default.host/$domain_name/g" $domain_name.conf
-sed -i "" "s/default.error/$domain_name.error/g" "$nginx_conf_file"
-sed -i "" "s/php.version/$selected_php_version/g" "$nginx_conf_file"
+run_sed "s/default.host/$domain_name/g" $domain_name.conf
+run_sed "s/default.error/$domain_name.error/g" "$nginx_conf_file"
+run_sed "s/php.version/$selected_php_version/g" "$nginx_conf_file"
 
 
 # -------------------------------- 框架配置写入Nginx文件 -----------------------------------
@@ -213,26 +239,27 @@ sed -i "" "s/php.version/$selected_php_version/g" "$nginx_conf_file"
 # 检查用户是否选择了框架配置
 if [[ $frame_choice -ge 1 ]]; then
     # 如果选择了框架配置，根据用户选择的序号从可用框架数组中获取对应的框架配置文件名称
-    selected_framework=${available_frameworks[$((frame_choice - 1))]}
+    selected_framework_path=${available_frameworks[$((frame_choice - 1))]}
+    selected_framework=$(basename "$selected_framework_path")
     # 拼接框架配置文件的完整路径
-    full_name="conf.d\/rewrite\/"${selected_framework}
+    full_name="conf.d\/rewrite\/${selected_framework}"
     # 替换文件名称
-    sed -i "" "s/frame.config/${full_name}/g" $domain_name.conf
+    run_sed "s/frame.config/${full_name}/g" $domain_name.conf
 
     # 根据框架类型修改root路径
     case $selected_framework in
         "laravel.conf")
             # 在替换好的域名后面加上public
-            sed -i "" "s/default.file/$folder_name\/public/g" "$nginx_conf_file"
+            run_sed "s/default.file/$folder_name\/public/g" "$nginx_conf_file"
             ;;
         *)
             # 其他框架：
-            sed -i "" "s/default.file/$folder_name/g" "$nginx_conf_file"
+            run_sed "s/default.file/$folder_name/g" "$nginx_conf_file"
             ;;
     esac
 else
     # 如果用户选择无需配置，使用sed命令删除配置文件中包含框架配置的行
-    sed -i "" "s/include frame\.config;//g" "$nginx_conf_file"
+    run_sed "s/include frame\.config;//g" "$nginx_conf_file"
 fi
 
 # ----------------------------------- 写入Host文件 ------------------------------------
@@ -240,19 +267,20 @@ fi
 # 检查Host文件中是否已经存在用户输入的域名
 if ! grep -q "$domain_name" /etc/hosts; then
     # 如果不存在，将域名和对应的IP地址以及备注信息追加到Host文件中
-    echo "127.0.0.1 $domain_name #$site_remark" >> /etc/hosts
+    echo "127.0.0.1 $domain_name #$site_remark" | sudo tee -a /etc/hosts > /dev/null
+    echo "✅ 已成功添加域名到 /etc/hosts"
 else
-    echo 'host中已存在相同域名,请注意清理'
+    echo '⚠️ host中已存在相同域名,请注意清理'
 fi
 
 
 # 切换到DNMP项目的根目录
 cd "$dnmp_path"
 # 使用docker-compose命令重启Nginx容器
-docker-compose restart nginx
+docker compose restart nginx
 
 # 输出网站创建成功的提示信息
-echo "\n\n\n🎉🎉🎉网站创建成功🎉🎉🎉\n\n\n"
+echo -e "\n\n\n🎉🎉🎉网站创建成功🎉🎉🎉\n\n\n"
 
 
 
