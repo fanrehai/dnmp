@@ -1,8 +1,19 @@
-#!/bin/sh
+#!/bin/bash
+
+# 获取脚本所在目录的绝对路径
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# 切换到脚本所在目录，避免依赖终端当前工作目录
+cd "$SCRIPT_DIR"
 
 ######################## Main #########################
-# 读取.env文件并加载其中的变量
-. .env
+# 从.env文件中加载环境变量，这样后续可以使用其中定义的路径等信息
+if [ -f ".env" ]; then
+    . .env
+else
+    echo -e "\033[1;31m❌ .env 文件不存在，请确保在 Dnmp 项目根目录执行脚本\033[0m"
+    exit 1
+fi
 # Dnmp项目目录
 dnmpPath=${DNMP_PATH}
 # PHP项目目录
@@ -36,4 +47,3 @@ if [ -d "$phpProjectPath/$hostName" ]; then
     sudo rm -rf "$phpProjectPath/$hostName"
   fi
 fi
-

@@ -45,9 +45,10 @@ render_kv_card() {
     export C_RESET C_TITLE C_CYAN C_LABEL C_VALUE C_DIM CARD_TITLE CARD_TITLE_COLOR
     perl -Mutf8 -CA -e '
         use utf8;
+        use Encode qw(decode_utf8);
         binmode(STDIN, ":utf8"); binmode(STDOUT, ":utf8");
         my %C = map { $_ => $ENV{$_} } qw(C_RESET C_TITLE C_CYAN C_LABEL C_VALUE C_DIM);
-        my $title = $ENV{CARD_TITLE} // "";
+        my $title = decode_utf8($ENV{CARD_TITLE} // "");
         my $tcolor = $ENV{CARD_TITLE_COLOR} // $C{C_TITLE};
         sub w { my $s = shift; $s =~ s/\e\[[0-9;]*m//g; my $w=0;
             for my $c (split //, $s) { my $cp=ord $c;
@@ -70,46 +71,6 @@ render_kv_card() {
             printf "  │ %s%s%s │ %s%s%s │\n",
                 $C{C_LABEL}, pad($k[$i],$kw), $C{C_RESET},
                 $C{C_VALUE}, pad($v[$i],$vw), $C{C_RESET};
-        }
-        print "  $bot";
-    '
-}
-
-# 渲染带序号的选择方框表（青色表头）
-# 用法: printf '%s\t%s\n' ... | CARD_TITLE="可用的PHP版本" render_choice_list
-render_choice_list() {
-    export C_RESET C_TITLE C_CYAN C_VALUE CARD_TITLE
-    perl -Mutf8 -CA -e '
-        use utf8;
-        binmode(STDIN, ":utf8"); binmode(STDOUT, ":utf8");
-        my %C = map { $_ => $ENV{$_} } qw(C_RESET C_TITLE C_CYAN C_VALUE);
-        my $title = $ENV{CARD_TITLE} // "";
-        sub w { my $s = shift; $s =~ s/\e\[[0-9;]*m//g; my $w=0;
-            for my $c (split //, $s) { my $cp=ord $c;
-                if ($cp>=0x1100 && ($cp<=0x115F || ($cp>=0x2E80 && $cp<=0xA4CF) ||
-                    ($cp>=0xAC00 && $cp<=0xD7A3) || ($cp>=0xF900 && $cp<=0xFAFF) ||
-                    ($cp>=0xFE30 && $cp<=0xFE4F) || ($cp>=0xFF00 && $cp<=0xFF60) ||
-                    ($cp>=0xFFE0 && $cp<=0xFFE6))) { $w+=2 } else { $w+=1 } }
-            return $w; }
-        sub pad { my ($s,$t)=@_; my $p=$t - w($s); $p=0 if $p<0; return $s.(" " x $p); }
-        my (@n,@name); my ($nw,$mw)=(w("#"),w("选项"));
-        while (my $l=<STDIN>) { chomp $l; next if $l eq "";
-            my ($a,$b)=split /\t/, $l, 2; $b //= "";
-            push @n,$a; push @name,$b;
-            $nw=w($a) if w($a)>$nw; $mw=w($b) if w($b)>$mw; }
-        my $top = "┌".("─"x($nw+2))."┬".("─"x($mw+2))."┐\n";
-        my $mid = "├".("─"x($nw+2))."┼".("─"x($mw+2))."┤\n";
-        my $bot = "└".("─"x($nw+2))."┴".("─"x($mw+2))."┘\n";
-        print "\n  $C{C_TITLE}$title$C{C_RESET}\n";
-        print "  $top";
-        printf "  │ %s%s%s │ %s%s%s │\n",
-            $C{C_CYAN}, pad("#",$nw), $C{C_RESET},
-            $C{C_CYAN}, pad("选项",$mw), $C{C_RESET};
-        print "  $mid";
-        for my $i (0..$#n) {
-            printf "  │ %s%s%s │ %s%s%s │\n",
-                $C{C_VALUE}, pad($n[$i],$nw), $C{C_RESET},
-                $C{C_VALUE}, pad($name[$i],$mw), $C{C_RESET};
         }
         print "  $bot";
     '
@@ -188,11 +149,9 @@ if [ $index -eq 0 ]; then
     exit 1
 fi
 
-php_list=""
 for ((i = 0; i < index; i++)); do
-    php_list+="$i"$'\t'"${available_php_versions[$i]}"$'\n'
+    printf '  %s%d.%s %s%s%s\n' "$C_CYAN" "$i" "$C_RESET" "$C_VALUE" "${available_php_versions[$i]}" "$C_RESET"
 done
-printf '%s' "$php_list" | CARD_TITLE="🐘 可用的 PHP 版本" render_choice_list
 echo
 
 while true; do
@@ -225,13 +184,12 @@ fi
 
 section "框架入口文件配置"
 
-frame_list="0"$'\t'"无需配置"$'\n'
+printf '  %s0.%s %s无需配置%s\n' "$C_CYAN" "$C_RESET" "$C_VALUE" "$C_RESET"
 frame_index=1
 for file in "${available_frameworks[@]}"; do
-    frame_list+="$frame_index"$'\t'"$(basename "$file")"$'\n'
+    printf '  %s%d.%s %s%s%s\n' "$C_CYAN" "$frame_index" "$C_RESET" "$C_VALUE" "$(basename "$file")" "$C_RESET"
     frame_index=$((frame_index + 1))
 done
-printf '%s' "$frame_list" | CARD_TITLE="🧩 可选框架" render_choice_list
 echo
 
 while true; do
@@ -245,8 +203,6 @@ while true; do
 done
 
 # ----------------------------------- 创建前确认 ------------------------------------
-
-section "确认创建"
 
 if [[ $frame_choice -ge 1 ]]; then
     confirm_framework=$(basename "${available_frameworks[$((frame_choice - 1))]}")
