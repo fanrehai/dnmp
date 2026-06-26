@@ -116,52 +116,42 @@ render_choice_list() {
     '
 }
 
+section "网站信息录入"
 error_count=0
-# 文件夹名称输入校验（非空+无空格）
+
+# 文件夹名称：非空 + 无空格
 while true; do
-    if [ $error_count -ge 5 ]; then
-        echo "错误次数超过 5 次，脚本退出。"
-        exit 1
-    fi
-    echo "📂请输入文件夹名称（不可为空/含空格）:"
+    [ $error_count -ge 5 ] && { err "错误次数超过 5 次，脚本退出。"; exit 1; }
+    ask "📂 请输入文件夹名称（不可为空 / 不含空格）:"
     read -r folder_name
     if [[ -n $folder_name && ! $folder_name =~ [[:space:]] ]]; then
         break
     else
-        error_count=$((error_count + 1))
-        echo "❌ 输入无效！请输入非空且不含空格的内容"
+        error_count=$((error_count + 1)); err "输入无效！请输入非空且不含空格的内容"
     fi
 done
 
-# 网站域名输入校验（非空+无空格）
+# 网站域名：非空 + 无空格
 while true; do
-    if [ $error_count -ge 5 ]; then
-        echo "错误次数超过 5 次，脚本退出。"
-        exit 1
-    fi
-    echo "🌐请输入网站域名（不可为空/含空格）:"
+    [ $error_count -ge 5 ] && { err "错误次数超过 5 次，脚本退出。"; exit 1; }
+    ask "🌐 请输入网站域名（不可为空 / 不含空格）:"
     read -r domain_name
     if [[ -n $domain_name && ! $domain_name =~ [[:space:]] ]]; then
         break
     else
-        error_count=$((error_count + 1))
-        echo "❌ 输入无效！请输入非空且不含空格的内容"
+        error_count=$((error_count + 1)); err "输入无效！请输入非空且不含空格的内容"
     fi
 done
 
-# 网站备注输入校验（非空+无空格）
+# 网站备注：仅非空（允许空格）
 while true; do
-    if [ $error_count -ge 5 ]; then
-        echo "错误次数超过 5 次，脚本退出。"
-        exit 1
-    fi
-    echo "📖请输入网站备注（不可为空/含空格）:"
+    [ $error_count -ge 5 ] && { err "错误次数超过 5 次，脚本退出。"; exit 1; }
+    ask "📖 请输入网站备注（不可为空，可含空格）:"
     read -r site_remark
-    if [[ -n $site_remark && ! $site_remark =~ [[:space:]] ]]; then
+    if [[ -n $site_remark ]]; then
         break
     else
-        error_count=$((error_count + 1))
-        echo "❌ 输入无效！请输入非空且不含空格的内容"
+        error_count=$((error_count + 1)); err "输入无效！备注不可为空"
     fi
 done
 
