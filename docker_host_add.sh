@@ -250,6 +250,41 @@ while true; do
     fi
 done
 
+# ----------------------------------- 创建前确认 ------------------------------------
+
+section "确认创建"
+
+if [[ $frame_choice -ge 1 ]]; then
+    confirm_framework=$(basename "${available_frameworks[$((frame_choice - 1))]}")
+else
+    confirm_framework="无需配置"
+fi
+confirm_project_path="$php_project_path/$folder_name"
+
+printf '%s\t%s\n' \
+    "文件夹"   "$folder_name" \
+    "域名"     "$domain_name" \
+    "备注"     "$site_remark" \
+    "PHP版本"  "$selected_php_version" \
+    "框架"     "$confirm_framework" \
+    "项目路径" "$confirm_project_path" \
+    | CARD_TITLE="确认创建" CARD_TITLE_COLOR="$C_TITLE" render_kv_card
+echo
+
+while true; do
+    ask "继续创建? [0. 取消 / 1. 确认]:"
+    read -r confirm_create
+    if [[ $confirm_create == "0" || $confirm_create == "1" ]]; then
+        break
+    else
+        err "输入无效，请输入 0 或 1"
+    fi
+done
+if [[ $confirm_create == "0" ]]; then
+    warn "已取消，未做任何修改。"
+    exit 0
+fi
+
 # ----------------------------------- 创建网站目录 ------------------------------------
 
 # 拼接网站文件夹的完整路径
