@@ -185,30 +185,31 @@ for container in $php_containers; do
     fi
 done
 
-# ----------------------------------- 框架选择 ------------------------------------
+# ----------------------------------- PHP版本选择 ------------------------------------
 
-# 输出可用PHP版本的提示信息，使用黄色高亮显示
-echo -e "\n\033[1;33m🐘可用的PHP版本:\033[0m"
+section "选择 PHP 版本"
 
-# 输出具体的版本选择提示信息
-echo -e "$version_choices"
+if [ $index -eq 0 ]; then
+    err "未找到可用的 PHP 版本容器（需正在运行且存在对应 conf）"
+    exit 1
+fi
 
-# 进入无限循环，用于验证用户输入的版本选择是否有效
+php_list=""
+for ((i = 0; i < index; i++)); do
+    php_list+="$i"$'\t'"${available_php_versions[$i]}"$'\n'
+done
+printf '%s' "$php_list" | CARD_TITLE="🐘 可用的 PHP 版本" render_choice_list
+echo
+
 while true; do
-    # 提示用户输入版本对应的数字
-    echo "请输入版本对应数字 [0-$((index - 1))]:"
-    # 读取用户输入的版本选择并存储到php_version_choice变量中
-    read php_version_choice
-    # 检查用户输入的版本选择是否在有效范围内
-    if [[ $php_version_choice -ge 0 && $php_version_choice -lt $index ]]; then
-        # 如果有效，跳出循环
+    ask "请输入版本对应数字 [0-$((index - 1))]:"
+    read -r php_version_choice
+    if [[ $php_version_choice =~ ^[0-9]+$ && $php_version_choice -ge 0 && $php_version_choice -lt $index ]]; then
         break
     else
-        # 如果无效，提示用户重新输入
-        echo "版本选择错误，请重新输入。"
+        err "版本选择错误，请重新输入。"
     fi
 done
-# 根据用户选择的序号，从可用PHP版本数组中获取对应的PHP版本容器名称
 selected_php_version=${available_php_versions[$php_version_choice]}
 
 # 获取可用的框架配置
