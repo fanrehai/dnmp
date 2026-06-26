@@ -38,7 +38,6 @@ err()  { printf '%s❌ %s%s\n' "$C_ACCENT" "$1" "$C_RESET"; }
 ok()   { printf '%s✅ %s%s\n' "$C_GREEN" "$1" "$C_RESET"; }
 warn() { printf '%s⚠️  %s%s\n' "$C_YELLOW" "$1" "$C_RESET"; }
 info() { printf '%s%s%s\n' "$C_DIM" "$1" "$C_RESET"; }
-kv()   { printf '  %s%s%s %s%s%s\n' "$C_LABEL" "$1" "$C_RESET" "$C_VALUE" "$2" "$C_RESET"; }
 
 # 渲染两列 key-value 方框卡片（CJK 宽度对齐）
 # 用法: printf '%s\t%s\n' ... | CARD_TITLE="确认创建" CARD_TITLE_COLOR="$C_TITLE" render_kv_card
@@ -169,17 +168,12 @@ available_php_versions=()
 # 初始化索引变量，用于记录可用PHP版本的序号
 index=0
 
-# 初始化存储版本选择提示信息的变量
-version_choices=""
-
 # 遍历获取到的PHP容器列表
 for container in $php_containers; do
     # 检查容器名称是否包含php且对应的Nginx配置文件存在
     if [[ $container =~ php ]] && [ -f "$php_nginx_config_path/$container.conf" ]; then
         # 将符合条件的容器名称添加到可用PHP版本数组中
         available_php_versions+=("$container")
-        # 拼接版本选择提示信息，包含序号和容器名称
-        version_choices="$version_choices $index. $container \n"
         # 序号加1
         index=$((index + 1))
     fi
@@ -325,9 +319,16 @@ run_sed() {
     fi
 }
 
-run_sed "s/default.host/$domain_name/g" "$nginx_conf_file"
-run_sed "s/default.error/$domain_name.error/g" "$nginx_conf_file"
-run_sed "s/php.version/$selected_php_version/g" "$nginx_conf_file"
+# 转义用于 sed 替换串的特殊字符（\ / &），避免破坏替换
+sed_escape() { printf '%s' "$1" | sed -e 's/[\/&\\]/\\&/g'; }
+
+esc_domain=$(sed_escape "$domain_name")
+esc_php=$(sed_escape "$selected_php_version")
+esc_folder=$(sed_escape "$folder_name")
+
+run_sed "s/default.host/$esc_domain/g" "$nginx_conf_file"
+run_sed "s/default.error/$esc_domain.error/g" "$nginx_conf_file"
+run_sed "s/php.version/$esc_php/g" "$nginx_conf_file"
 ok "已生成配置文件: $nginx_conf_file"
 
 
@@ -340,10 +341,10 @@ if [[ $frame_choice -ge 1 ]]; then
     run_sed "s/frame.config/${full_name}/g" "$nginx_conf_file"
     case $selected_framework in
         "laravel.conf")
-            run_sed "s/default.file/$folder_name\/public/g" "$nginx_conf_file"
+            run_sed "s/default.file/$esc_folder\/public/g" "$nginx_conf_file"
             ;;
         *)
-            run_sed "s/default.file/$folder_name/g" "$nginx_conf_file"
+            run_sed "s/default.file/$esc_folder/g" "$nginx_conf_file"
             ;;
     esac
     info "已写入框架配置: $selected_framework"
