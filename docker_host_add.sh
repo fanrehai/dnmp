@@ -10,7 +10,7 @@ cd "$SCRIPT_DIR"
 if [ -f ".env" ]; then
     . .env
 else
-    echo -e "\033[1;31m❌ .env 文件不存在，请确保在正确的目录执行脚本\033[0m"
+    echo -e "\033[1;31m❌ .env 文件不存在，请确保在 Dnmp 项目根目录执行脚本\033[0m"
     exit 1
 fi
 
@@ -18,6 +18,27 @@ fi
 dnmp_path=${DNMP_PATH}
 # 定义PHP项目的路径，同样从.env文件加载的变量赋值
 php_project_path=${PHP_PROJECT_PATH}
+
+# ---- 颜色定义（与 docker_host_list.sh 保持一致）----
+C_RESET=$'\033[0m'
+C_TITLE=$'\033[1;96m'       # 亮青 标题
+C_ACCENT=$'\033[1;95m'      # 亮品红 强调
+C_CYAN=$'\033[38;5;45m'     # 青 边框/标签
+C_GREEN=$'\033[1;92m'       # 绿 成功
+C_YELLOW=$'\033[1;93m'      # 黄 警告/提示
+C_DIM=$'\033[38;5;240m'     # 暗灰 次要
+C_MAGENTA=$'\033[38;5;177m' # 紫 特殊
+C_LABEL=$'\033[38;5;117m'   # 浅蓝 字段名
+C_VALUE=$'\033[1;97m'       # 白 字段值
+
+# ---- 纯 Bash 提示辅助函数 ----
+section() { printf '\n  %s▰▰▰  %s  ▰▰▰%s\n  %s%s%s\n' "$C_TITLE" "$1" "$C_RESET" "$C_DIM" "────────────────────────────" "$C_RESET"; }
+ask()  { printf '%s%s%s\n' "$C_CYAN" "$1" "$C_RESET"; }
+err()  { printf '%s❌ %s%s\n' "$C_ACCENT" "$1" "$C_RESET"; }
+ok()   { printf '%s✅ %s%s\n' "$C_GREEN" "$1" "$C_RESET"; }
+warn() { printf '%s⚠️  %s%s\n' "$C_YELLOW" "$1" "$C_RESET"; }
+info() { printf '%s%s%s\n' "$C_DIM" "$1" "$C_RESET"; }
+kv()   { printf '  %s%s%s %s%s%s\n' "$C_LABEL" "$1" "$C_RESET" "$C_VALUE" "$2" "$C_RESET"; }
 
 error_count=0
 # 文件夹名称输入校验（非空+无空格）
