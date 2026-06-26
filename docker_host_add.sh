@@ -287,53 +287,36 @@ fi
 
 # ----------------------------------- 创建网站目录 ------------------------------------
 
-# 拼接网站文件夹的完整路径
+section "创建网站目录"
 site_folder="$php_project_path/$folder_name"
-# 检查网站文件夹是否存在
 if [ ! -d "$site_folder" ]; then
-    # 如果不存在，创建该文件夹
     mkdir "$site_folder"
-    # 输出文件夹创建成功的提示信息
-    echo "📂文件夹创建成功"
+    ok "文件夹创建成功: $site_folder"
 else
-    # 如果文件夹已存在，输出提示信息
-    echo -e "\n\033[1;33m📂文件夹已经存在:\033[0m"
-    # 提示用户选择取消或继续
-    echo "0. 取消"
-    echo "1. 继续"
-    # 进入无限循环，用于验证用户输入的选择是否有效
+    warn "文件夹已存在: $site_folder"
     while true; do
-        # 提示用户输入是否直接使用已存在的文件夹
-        echo "是否直接使用 [0-1]:"
-        # 读取用户输入的选择并存储到use_existing_folder变量中
-        read use_existing_folder
-        # 检查用户输入的选择是否为0或1
-        if [[ $use_existing_folder -eq 0 || $use_existing_folder -eq 1 ]]; then
-            # 如果有效，跳出循环
+        ask "是否直接使用 [0. 取消 / 1. 继续]:"
+        read -r use_existing_folder
+        if [[ $use_existing_folder == "0" || $use_existing_folder == "1" ]]; then
             break
         else
-            echo "输入无效，请重新输入。"
+            err "输入无效，请输入 0 或 1"
         fi
     done
-    # 如果用户选择取消，退出脚本
-    if [[ $use_existing_folder -eq 0 ]]; then
-        exit
+    if [[ $use_existing_folder == "0" ]]; then
+        warn "已取消。"
+        exit 0
     fi
 fi
 
 # ----------------------------------- 创建 Nginx 配置 ------------------------------------
 
-# 定义Nginx配置文件所在的目录
+section "生成 Nginx 配置"
 nginx_conf_dir="$dnmp_path/services/nginx/conf.d"
-# 切换到Nginx配置文件所在的目录
 cd "$nginx_conf_dir"
-# 拼接Nginx配置文件的完整名称
 nginx_conf_file="$domain_name.conf"
-# 从默认配置文件模板复制一个新的配置文件
 cp ./default.conf.sample "$nginx_conf_file"
 
-# --- 兼容性修复：处理 macOS 和 Linux 的 sed 差异 ---
-# 定义一个简单的替换函数
 run_sed() {
     if [[ "$OSTYPE" == "darwin"* ]]; then
         sed -i "" "$1" "$2"
@@ -342,59 +325,51 @@ run_sed() {
     fi
 }
 
-# 替换配置 这里的空双引号是为了避开命令的强制备份逻辑
-run_sed "s/default.host/$domain_name/g" $domain_name.conf
+run_sed "s/default.host/$domain_name/g" "$nginx_conf_file"
 run_sed "s/default.error/$domain_name.error/g" "$nginx_conf_file"
 run_sed "s/php.version/$selected_php_version/g" "$nginx_conf_file"
+ok "已生成配置文件: $nginx_conf_file"
 
 
 # -------------------------------- 框架配置写入Nginx文件 -----------------------------------
 
-# 检查用户是否选择了框架配置
 if [[ $frame_choice -ge 1 ]]; then
-    # 如果选择了框架配置，根据用户选择的序号从可用框架数组中获取对应的框架配置文件名称
     selected_framework_path=${available_frameworks[$((frame_choice - 1))]}
     selected_framework=$(basename "$selected_framework_path")
-    # 拼接框架配置文件的完整路径
     full_name="conf.d\/rewrite\/${selected_framework}"
-    # 替换文件名称
-    run_sed "s/frame.config/${full_name}/g" $domain_name.conf
-
-    # 根据框架类型修改root路径
+    run_sed "s/frame.config/${full_name}/g" "$nginx_conf_file"
     case $selected_framework in
         "laravel.conf")
-            # 在替换好的域名后面加上public
             run_sed "s/default.file/$folder_name\/public/g" "$nginx_conf_file"
             ;;
         *)
-            # 其他框架：
             run_sed "s/default.file/$folder_name/g" "$nginx_conf_file"
             ;;
     esac
+    info "已写入框架配置: $selected_framework"
 else
-    # 如果用户选择无需配置，使用sed命令删除配置文件中包含框架配置的行
     run_sed "s/include frame\.config;//g" "$nginx_conf_file"
+    info "未配置框架入口"
 fi
 
 # ----------------------------------- 写入Host文件 ------------------------------------
 
-# 检查Host文件中是否已经存在用户输入的域名
-if ! grep -q "$domain_name" /etc/hosts; then
-    # 如果不存在，将域名和对应的IP地址以及备注信息追加到Host文件中
-    echo "127.0.0.1 $domain_name #$site_remark" | sudo tee -a /etc/hosts > /dev/null
-    echo "✅ 已成功添加域名到 /etc/hosts"
+section "写入 hosts"
+# 整词匹配域名（含行内 # 备注的行也算已存在），避免子串误判
+if grep -qE "(^|[[:space:]])${domain_name//./\\.}([[:space:]]|#|$)" /etc/hosts 2>/dev/null; then
+    warn "hosts 中已存在相同域名，请注意清理"
+    hosts_status="已存在"
 else
-    echo '⚠️ host中已存在相同域名,请注意清理'
+    echo "127.0.0.1 $domain_name #$site_remark" | sudo tee -a /etc/hosts > /dev/null
+    ok "已成功添加域名到 /etc/hosts"
+    hosts_status="已添加"
 fi
 
+# ----------------------------------- 重启 Nginx ------------------------------------
 
-# 切换到DNMP项目的根目录
+section "重启 Nginx"
 cd "$dnmp_path"
-# 使用docker-compose命令重启Nginx容器
 docker compose restart nginx
-
-# 输出网站创建成功的提示信息
-echo -e "\n\n\n🎉🎉🎉网站创建成功🎉🎉🎉\n\n\n"
 
 
 
