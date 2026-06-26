@@ -371,6 +371,19 @@ section "重启 Nginx"
 cd "$dnmp_path"
 docker compose restart nginx
 
+# ----------------------------------- 结果摘要 ------------------------------------
+
+printf '%s\t%s\n' \
+    "文件夹"     "$folder_name" \
+    "域名"       "$domain_name" \
+    "备注"       "$site_remark" \
+    "PHP版本"    "$selected_php_version" \
+    "框架"       "$confirm_framework" \
+    "项目路径"   "$confirm_project_path" \
+    "hosts状态"  "$hosts_status" \
+    | CARD_TITLE="🎉 创建成功" CARD_TITLE_COLOR="$C_GREEN" render_kv_card
+echo
+
 
 
 
