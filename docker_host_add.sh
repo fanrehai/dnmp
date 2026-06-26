@@ -225,37 +225,28 @@ done < <(find "$frame_config_path" -maxdepth 1 -type f -name "*.conf" -print0 | 
 
 # 检查框架配置目录下是否有文件
 if [ ${#available_frameworks[@]} -eq 0 ]; then
-    # 如果没有文件，输出错误信息并退出脚本
-    echo -e "\033[1;31mPHP框架配置目录错误!!!\033[0m"
+    err "PHP 框架配置目录错误!!!"
     exit 1
 fi
 
-# 初始化框架选择的序号
-frame_index=1
+section "框架入口文件配置"
 
-frame_choices=" 0. 无需配置\n"  # 初始选项换行
+frame_list="0"$'\t'"无需配置"$'\n'
+frame_index=1
 for file in "${available_frameworks[@]}"; do
-    # 使用换行符确保每个选项单独一行
-    frame_choices="$frame_choices$(printf " %d. %s\n" $frame_index "$(basename "$file")")"
+    frame_list+="$frame_index"$'\t'"$(basename "$file")"$'\n'
     frame_index=$((frame_index + 1))
 done
+printf '%s' "$frame_list" | CARD_TITLE="🧩 可选框架" render_choice_list
+echo
 
-echo -e "\n\033[1;33m框架入口文件配置:\033[0m"
-echo -e "$frame_choices"
-
-# 进入无限循环，用于验证用户输入的框架选择是否有效
 while true; do
-    # 提示用户输入框架对应的数字
-    echo "请输入框架对应数字[0-$((frame_index - 1))]:"
-    # 读取用户输入的框架选择并存储到frame_choice变量中
-    read frame_choice
-    # 检查用户输入的框架选择是否在有效范围内
-    if [[ $frame_choice -ge 0 && $frame_choice -lt $frame_index ]]; then
-        # 如果有效，跳出循环
+    ask "请输入框架对应数字 [0-$((frame_index - 1))]:"
+    read -r frame_choice
+    if [[ $frame_choice =~ ^[0-9]+$ && $frame_choice -ge 0 && $frame_choice -lt $frame_index ]]; then
         break
     else
-        # 如果无效，提示用户重新输入
-        echo -e "\033[1;31m输入无效，请重新输入!!!\033[0m"
+        err "输入无效，请重新输入!!!"
     fi
 done
 
