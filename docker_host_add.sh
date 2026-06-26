@@ -40,6 +40,82 @@ warn() { printf '%s⚠️  %s%s\n' "$C_YELLOW" "$1" "$C_RESET"; }
 info() { printf '%s%s%s\n' "$C_DIM" "$1" "$C_RESET"; }
 kv()   { printf '  %s%s%s %s%s%s\n' "$C_LABEL" "$1" "$C_RESET" "$C_VALUE" "$2" "$C_RESET"; }
 
+# 渲染两列 key-value 方框卡片（CJK 宽度对齐）
+# 用法: printf '%s\t%s\n' ... | CARD_TITLE="确认创建" CARD_TITLE_COLOR="$C_TITLE" render_kv_card
+render_kv_card() {
+    export C_RESET C_TITLE C_CYAN C_LABEL C_VALUE C_DIM CARD_TITLE CARD_TITLE_COLOR
+    perl -Mutf8 -CA -e '
+        use utf8;
+        binmode(STDIN, ":utf8"); binmode(STDOUT, ":utf8");
+        my %C = map { $_ => $ENV{$_} } qw(C_RESET C_TITLE C_CYAN C_LABEL C_VALUE C_DIM);
+        my $title = $ENV{CARD_TITLE} // "";
+        my $tcolor = $ENV{CARD_TITLE_COLOR} // $C{C_TITLE};
+        sub w { my $s = shift; $s =~ s/\e\[[0-9;]*m//g; my $w=0;
+            for my $c (split //, $s) { my $cp=ord $c;
+                if ($cp>=0x1100 && ($cp<=0x115F || ($cp>=0x2E80 && $cp<=0xA4CF) ||
+                    ($cp>=0xAC00 && $cp<=0xD7A3) || ($cp>=0xF900 && $cp<=0xFAFF) ||
+                    ($cp>=0xFE30 && $cp<=0xFE4F) || ($cp>=0xFF00 && $cp<=0xFF60) ||
+                    ($cp>=0xFFE0 && $cp<=0xFFE6))) { $w+=2 } else { $w+=1 } }
+            return $w; }
+        sub pad { my ($s,$t)=@_; my $p=$t - w($s); $p=0 if $p<0; return $s.(" " x $p); }
+        my (@k,@v); my ($kw,$vw)=(0,0);
+        while (my $l=<STDIN>) { chomp $l; next if $l eq "";
+            my ($a,$b)=split /\t/, $l, 2; $b //= "";
+            push @k,$a; push @v,$b;
+            $kw=w($a) if w($a)>$kw; $vw=w($b) if w($b)>$vw; }
+        my $top = "┌".("─"x($kw+2))."┬".("─"x($vw+2))."┐\n";
+        my $bot = "└".("─"x($kw+2))."┴".("─"x($vw+2))."┘\n";
+        print "\n  $tcolor▰▰▰  $title  ▰▰▰$C{C_RESET}\n\n";
+        print "  $top";
+        for my $i (0..$#k) {
+            printf "  │ %s%s%s │ %s%s%s │\n",
+                $C{C_LABEL}, pad($k[$i],$kw), $C{C_RESET},
+                $C{C_VALUE}, pad($v[$i],$vw), $C{C_RESET};
+        }
+        print "  $bot";
+    '
+}
+
+# 渲染带序号的选择方框表（青色表头）
+# 用法: printf '%s\t%s\n' ... | CARD_TITLE="可用的PHP版本" render_choice_list
+render_choice_list() {
+    export C_RESET C_TITLE C_CYAN C_VALUE CARD_TITLE
+    perl -Mutf8 -CA -e '
+        use utf8;
+        binmode(STDIN, ":utf8"); binmode(STDOUT, ":utf8");
+        my %C = map { $_ => $ENV{$_} } qw(C_RESET C_TITLE C_CYAN C_VALUE);
+        my $title = $ENV{CARD_TITLE} // "";
+        sub w { my $s = shift; $s =~ s/\e\[[0-9;]*m//g; my $w=0;
+            for my $c (split //, $s) { my $cp=ord $c;
+                if ($cp>=0x1100 && ($cp<=0x115F || ($cp>=0x2E80 && $cp<=0xA4CF) ||
+                    ($cp>=0xAC00 && $cp<=0xD7A3) || ($cp>=0xF900 && $cp<=0xFAFF) ||
+                    ($cp>=0xFE30 && $cp<=0xFE4F) || ($cp>=0xFF00 && $cp<=0xFF60) ||
+                    ($cp>=0xFFE0 && $cp<=0xFFE6))) { $w+=2 } else { $w+=1 } }
+            return $w; }
+        sub pad { my ($s,$t)=@_; my $p=$t - w($s); $p=0 if $p<0; return $s.(" " x $p); }
+        my (@n,@name); my ($nw,$mw)=(w("#"),w("选项"));
+        while (my $l=<STDIN>) { chomp $l; next if $l eq "";
+            my ($a,$b)=split /\t/, $l, 2; $b //= "";
+            push @n,$a; push @name,$b;
+            $nw=w($a) if w($a)>$nw; $mw=w($b) if w($b)>$mw; }
+        my $top = "┌".("─"x($nw+2))."┬".("─"x($mw+2))."┐\n";
+        my $mid = "├".("─"x($nw+2))."┼".("─"x($mw+2))."┤\n";
+        my $bot = "└".("─"x($nw+2))."┴".("─"x($mw+2))."┘\n";
+        print "\n  $C{C_TITLE}$title$C{C_RESET}\n";
+        print "  $top";
+        printf "  │ %s%s%s │ %s%s%s │\n",
+            $C{C_CYAN}, pad("#",$nw), $C{C_RESET},
+            $C{C_CYAN}, pad("选项",$mw), $C{C_RESET};
+        print "  $mid";
+        for my $i (0..$#n) {
+            printf "  │ %s%s%s │ %s%s%s │\n",
+                $C{C_VALUE}, pad($n[$i],$nw), $C{C_RESET},
+                $C{C_VALUE}, pad($name[$i],$mw), $C{C_RESET};
+        }
+        print "  $bot";
+    '
+}
+
 error_count=0
 # 文件夹名称输入校验（非空+无空格）
 while true; do
