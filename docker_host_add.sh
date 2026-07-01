@@ -140,6 +140,10 @@ for container in $php_containers; do
     fi
 done
 
+# 按版本号数值升序排序（php83 → 83, php74 → 74）
+sorted_versions=($(printf '%s\n' "${available_php_versions[@]}" | \
+    sed 's/php//' | sort -n | sed 's/^/php/'))
+
 # ----------------------------------- PHP版本选择 ------------------------------------
 
 section "选择 PHP 版本"
