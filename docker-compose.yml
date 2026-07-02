@@ -157,6 +157,8 @@ services:
         PHP_EXTENSIONS: ${PHP83_EXTENSIONS}
         TZ: "$TZ"
     container_name: php83
+    ports:
+      - "${PHP83_PORT}:9000"
     volumes:
       - ${SOURCE_DIR}:/www/:rw
       - ${PHP83_PHP_CONF_FILE}:/usr/local/etc/php/php.ini:ro
